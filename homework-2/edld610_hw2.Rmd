@@ -1,0 +1,62 @@
+---
+title: "Homework 2"
+author: "JP & Maria"
+date: "February 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(rio)
+library(here)
+
+data <- import(here("data", "crime.csv")) %>% 
+  janitor::clean_names()
+```
+
+```{r}
+names(data)
+
+table(data$is_crime)
+
+crime_data <- data %>%
+  filter(is_crime == 1)
+
+table(crime_data$offense_type_id)
+table(crime_data$offense_category_id)
+
+str(crime_data)
+
+crime <- crime_data %>%
+  mutate(offense_cat = str_to_title(offense_category_id)) %>% 
+  group_by(offense_cat) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(pro = n/sum(n),
+         per = pro*100,
+         se = sqrt(pro*(1 - pro)/n),
+         low_con = pro + qnorm(.025)*se,
+         high_con = pro + qnorm(.975)*se)
+
+ggplot(crime, aes(fct_reorder(offense_cat, pro), pro)) +
+  geom_point(color = "cornflowerblue") +
+  geom_errorbar(aes(ymin = low_con,
+                    ymax = high_con)) +
+  scale_y_continuous(labels = c("0.0%", 
+                                "10.0%",
+                                "20.0%",
+                                "30.0%"),
+                     breaks = c(0, .10, .20, .30),
+                     limits = c(0, .30)) +
+  coord_flip() +
+  labs(title = "Crimes in Denver",
+       x = " ",
+       y = "Percentage",
+       caption = "Denver Crime Data Distributed via Kaggle
+       http://www.kaggle.com/paultimothymooney/denver-crime-data")
+
+```
